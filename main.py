@@ -3,8 +3,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import os
 import graph_api
-import tkinter as tk
-from tkinter import messagebox
 import glob
 from pathlib import Path
 
