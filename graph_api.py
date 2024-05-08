@@ -5,6 +5,8 @@ from msgraph import GraphServiceClient
 
 
 class GraphAPI:
+    """Class"""
+
     def __init__(self):
         credential = InteractiveBrowserCredential(
             client_id=os.getenv('client_id'),
@@ -15,6 +17,7 @@ class GraphAPI:
 
     @staticmethod
     def sha256sum(filename: str):
+        """Function"""
         # BUF_SIZE is totally arbitrary, change for your app!
         buff_size = 65536  # lets read stuff in 64kb chunks!
 
@@ -30,6 +33,7 @@ class GraphAPI:
 
     @staticmethod
     def sha1sum(filename: str):
+        """Function"""
         buff_size = 65536  # lets read stuff in 64kb chunks!
 
         sha1 = hashlib.sha1()
@@ -43,7 +47,7 @@ class GraphAPI:
         return sha1.hexdigest()
 
     async def search_file(self, file_name: str, file_path: str) -> list:
-
+        """Function"""
         raw_url = "https://graph.microsoft.com/v1.0/me/drive/root/search(q='"
         raw_url = raw_url + file_name + "')?select=name,id,size,file"
         item_list = await self.client.me.drive.with_url(raw_url).get()

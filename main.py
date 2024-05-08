@@ -6,6 +6,7 @@ from pathlib import Path
 import graph_api
 
 async def main(drive_path):
+    """Function"""
     if not drive_path:
         messagebox.showerror("Error", "Please enter local drive path.")
         sys.exit()
