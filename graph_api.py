@@ -51,10 +51,10 @@ class GraphAPI:
         matched_items = []
         for item in item_list.additional_data["value"]:
             if item["size"] == os.path.getsize(file_path):
-                if item["file"]["hashes"]["sha256Hash"] is not "":
+                if item["file"]["hashes"]["sha256Hash"] != "":
                     if self.sha256sum(file_path).lower() == item["file"]["hashes"]["sha256Hash"].lower():
                         matched_items.append(item)
-                elif item["file"]["hashes"]["sha1Hash"] is not "":
+                elif item["file"]["hashes"]["sha1Hash"] != "":
                     if self.sha1sum(file_path).lower() == item["file"]["hashes"]["sha1Hash"].lower():
                         matched_items.append(item)
         return matched_items

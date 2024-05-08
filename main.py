@@ -28,7 +28,7 @@ async def main(local_drive_path):
         for path in pathlist:
             path_in_str = str(path)
             matched_files = await graph_api_helper.search_file(str(path.name), path_in_str)
-            if len(matched_files) is not 0:
+            if len(matched_files) != 0:
                 os.remove(path_in_str)
                 print("Deleting " + path_in_str)
 
@@ -36,7 +36,7 @@ async def main(local_drive_path):
         for path in pathlist:
             path_in_str = str(path)
             matched_files = await graph_api_helper.search_file(str(path.name), path_in_str)
-            if len(matched_files) is not 0:
+            if len(matched_files) != 0:
                 os.remove(path_in_str)
                 print("Deleting " + path_in_str)
 
