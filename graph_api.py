@@ -1,3 +1,5 @@
+"""Module Description."""
+
 import os
 import hashlib
 from azure.identity import InteractiveBrowserCredential
