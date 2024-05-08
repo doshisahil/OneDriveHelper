@@ -1,8 +1,10 @@
+import os
+import hashlib
 from azure.identity import InteractiveBrowserCredential
 from msgraph import GraphServiceClient
-import os
-from pathlib import Path
-import hashlib
+
+# from pathlib import Path
+
 
 
 class GraphAPI:
@@ -31,14 +33,13 @@ class GraphAPI:
 
     @staticmethod
     def sha1sum(filename: str):
-        # BUF_SIZE is totally arbitrary, change for your app!
-        BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
+        buff_size = 65536  # lets read stuff in 64kb chunks!
 
         sha1 = hashlib.sha1()
 
         with open(filename, 'rb') as f:
             while True:
-                data = f.read(BUF_SIZE)
+                data = f.read(buff_size)
                 if not data:
                     break
                 sha1.update(data)
@@ -54,9 +55,24 @@ class GraphAPI:
         for item in item_list.additional_data["value"]:
             if item["size"] == os.path.getsize(file_path):
                 if item["file"]["hashes"]["sha256Hash"] != "":
-                    if self.sha256sum(file_path).lower() == item["file"]["hashes"]["sha256Hash"].lower():
+                    if self.sha256sum(file_path).lower() == \
+                        item["file"]["hashes"]["sha256Hash"].lower():
                         matched_items.append(item)
                 elif item["file"]["hashes"]["sha1Hash"] != "":
-                    if self.sha1sum(file_path).lower() == item["file"]["hashes"]["sha1Hash"].lower():
+                    if self.sha1sum(file_path).lower() == \
+                        item["file"]["hashes"]["sha1Hash"].lower():
                         matched_items.append(item)
         return matched_items
+
+
+# graph_api.py:49:77: C0303: Trailing whitespace (trailing-whitespace)
+# graph_api.py:57:0: C0301: Line too long (105/100) (line-too-long)
+# graph_api.py:60:0: C0301: Line too long (101/100) (line-too-long)
+# graph_api.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+# graph_api.py:8:0: C0115: Missing class docstring (missing-class-docstring)
+# graph_api.py:18:4: C0116: Missing function or method docstring (missing-function-docstring)
+# graph_api.py:20:8: C0103: Variable name "BUF_SIZE" doesn't conform to snake_case naming style (invalid-name)
+# graph_api.py:33:4: C0116: Missing function or method docstring (missing-function-docstring)
+# graph_api.py:35:8: C0103: Variable name "BUF_SIZE" doesn't conform to snake_case naming style (invalid-name)
+# graph_api.py:47:4: C0116: Missing function or method docstring (missing-function-docstring)
+
