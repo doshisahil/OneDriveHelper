@@ -1,5 +1,9 @@
+"""
+Main
+"""
 import asyncio
 import os
+import sys
 from pathlib import Path
 from tkinter import messagebox
 
@@ -9,11 +13,11 @@ import graph_api
 async def main(local_path):
     if not local_path:
         messagebox.showerror("Error", "Please enter local drive path.")
-        exit()
+        sys.exit()
 
     if not os.path.exists(local_path):
         messagebox.showerror("Error", "Local drive path does not exist.")
-        exit()
+        sys.exit()
     graph_api_helper = graph_api.GraphAPI()
 
     # Get list of files in the local drive
