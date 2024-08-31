@@ -160,3 +160,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 .DS_Store
+.idea/workspace.xml
+pyvenv.cfg
+.idea/OneDriveHelper.iml
+share/
