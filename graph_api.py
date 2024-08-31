@@ -51,10 +51,20 @@ class GraphAPI:
         matched_items = []
         for item in item_list.additional_data["value"]:
             if item["size"] == os.path.getsize(file_path):
-                if item["file"]["hashes"]["sha256Hash"] is not "":
+                if item["file"]["hashes"]["sha256Hash"] != "":
                     if self.sha256sum(file_path).lower() == item["file"]["hashes"]["sha256Hash"].lower():
                         matched_items.append(item)
-                elif item["file"]["hashes"]["sha1Hash"] is not "":
+                    else:
+                        print("1)Skipped as hash was different :" + file_path + "->" + self.sha256sum(file_path).lower() + ":" +
+                              item["file"]["hashes"]["sha256Hash"].lower())
+                elif item["file"]["hashes"]["sha1Hash"] != "":
                     if self.sha1sum(file_path).lower() == item["file"]["hashes"]["sha1Hash"].lower():
                         matched_items.append(item)
+                    else:
+                        print("2)Skipped as hash was different :" + file_path + "->" + self.sha1sum(file_path).lower() + ":" +
+                              item["file"]["hashes"]["sha1Hash"].lower())
+                else:
+                    print("3)Skipped as hash was absent :" + file_path)
+            else:
+                print("4)Skipped as size different :" + file_path+"->"+str(item["size"])+":"+str(os.path.getsize(file_path)))
         return matched_items
