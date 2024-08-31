@@ -1,20 +1,17 @@
 import asyncio
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
 import os
-import graph_api
-import tkinter as tk
-from tkinter import messagebox
-import glob
 from pathlib import Path
+from tkinter import messagebox
+
+import graph_api
 
 
-async def main(local_drive_path):
-    if not local_drive_path:
+async def main(local_path):
+    if not local_path:
         messagebox.showerror("Error", "Please enter local drive path.")
         exit()
 
-    if not os.path.exists(local_drive_path):
+    if not os.path.exists(local_path):
         messagebox.showerror("Error", "Local drive path does not exist.")
         exit()
     graph_api_helper = graph_api.GraphAPI()
@@ -24,7 +21,7 @@ async def main(local_drive_path):
                         "*.heifs", "*.heic", "*.heics", "*.avci", "*.avcs", "*.hif"]
 
     for ext in image_extensions:
-        pathlist = Path(local_drive_path).rglob("**/" + ext)
+        pathlist = Path(local_path).rglob("**/" + ext)
         for path in pathlist:
             path_in_str = str(path)
             matched_files = await graph_api_helper.search_file(str(path.name), path_in_str)
@@ -34,7 +31,7 @@ async def main(local_drive_path):
             else:
                 print("Skipped " + path_in_str)
 
-        pathlist = Path(local_drive_path).rglob("**/" + ext.upper())
+        pathlist = Path(local_path).rglob("**/" + ext.upper())
         for path in pathlist:
             path_in_str = str(path)
             matched_files = await graph_api_helper.search_file(str(path.name), path_in_str)
