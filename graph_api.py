@@ -1,3 +1,6 @@
+"""
+This module provides API functions for interacting with the graph service.
+"""
 import hashlib
 import os
 
@@ -6,6 +9,9 @@ from msgraph import GraphServiceClient
 
 
 class GraphAPI:
+    """
+        This class handles operations related to graph data processing and communication.
+    """
     def __init__(self):
         credential = InteractiveBrowserCredential(
             client_id=os.getenv('client_id'),
@@ -45,8 +51,8 @@ class GraphAPI:
         return sha1.hexdigest()
 
     async def search_file(self, file_name: str, file_path: str) -> list:
-        raw_url = "https://graph.microsoft.com/v1.0/me/drive/root/search(q='" + file_name + ("')?select=name,id,size,"
-                                                                                             "file")
+        raw_url = ("https://graph.microsoft.com/v1.0/me/drive/root/search(q='" +
+                   file_name + "')?select=name,id,size,file")
         item_list = await self.client.me.drive.with_url(raw_url).get()
         # item_list.additional_data["value"][0]["name"]
         matched_items = []
@@ -70,5 +76,5 @@ class GraphAPI:
                     print("3)Skipped as hash was absent :" + file_path)
             else:
                 print("4)Skipped as size different :" +
-                      file_path+"->"+str(item["size"])+":"+str(os.path.getsize(file_path)))
+                      file_path + "->" + str(item["size"]) + ":" + str(os.path.getsize(file_path)))
         return matched_items
