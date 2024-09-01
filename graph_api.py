@@ -4,13 +4,18 @@ This module provides API functions for interacting with the graph service.
 import hashlib
 import os
 import logging
+import urllib
+
 from azure.identity import InteractiveBrowserCredential
 from msgraph import GraphServiceClient
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("process_log.log"),
+        logging.StreamHandler()
+    ]
 )
 
 
@@ -24,7 +29,7 @@ class GraphAPI:
             tenant_id=os.getenv('TENANT_ID'),
         )
         self.scopes = ["User.Read", "Files.Read", "Files.Read.All"]
-        self.client = GraphServiceClient(credential=self.credential, scopes=self.scopes)
+        self.client = GraphServiceClient(credentials=self.credential, scopes=self.scopes)
 
     @staticmethod
     def compute_hash(filename: str, hash_type='sha256') -> str:
@@ -52,8 +57,14 @@ class GraphAPI:
         :param file_path: The full path of the local file.
         :return: A list of matched items.
         """
-        raw_url = f"https://graph.microsoft.com/v1.0/me/drive/root/search(q='{file_name}')?select=name,id,size,file"
+        # Safely encode the file_name for use in the URL
+        encoded_file_name = urllib.parse.quote(file_name, safe='')
+        raw_url = f"https://graph.microsoft.com/v1.0/me/drive/root/search(q='{encoded_file_name}')?select=name,id,size,file"
+
         item_list = await self.client.me.drive.with_url(raw_url).get()
+        if not item_list.additional_data.get("value", []):
+            logging.info(f"Skipped as couldn't find file: {file_path}")
+            return []
         matched_items = []
 
         file_size = os.path.getsize(file_path)

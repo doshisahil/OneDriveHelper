@@ -38,15 +38,20 @@ async def process_file(graph_api_helper, path, local_path, backup_path):
     :param backup_path: Directory to back up files before deletion.
     """
     path_str = str(path)
-    matched_files = await graph_api_helper.search_file(path.name, path_str)
+    try:
+        matched_files = await graph_api_helper.search_file(path.name, path_str)
+        if matched_files:
+            if backup_path:
+                backup_file(path, local_path, backup_path)
+            os.remove(path_str)
+            logging.info(f"Deleted: {path_str}")
+        else:
+            logging.info(f"Skipped: {path_str}")
+    except Exception as e:
+        logging.exception(f"Skipped as EXCEPTION OCCURRED : {path_str}")
+        return
 
-    if matched_files:
-        if backup_path:
-            backup_file(path, local_path, backup_path)
-        os.remove(path_str)
-        logging.info(f"Deleted: {path_str}")
-    else:
-        logging.info(f"Skipped: {path_str}")
+
 
 
 def backup_file(path, local_path, backup_path):
