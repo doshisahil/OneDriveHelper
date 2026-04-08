@@ -91,7 +91,12 @@ class SyncScannerService:
         pending_tasks: list[asyncio.Future[tuple[FileStatus, bool]]] = []
 
         async def process_batch() -> None:
-            for file_status, is_synced in await asyncio.gather(*pending_tasks):
+            results = await asyncio.gather(*pending_tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, BaseException):
+                    report.errors.append(f"Unexpected scan failure: {result}")
+                    continue
+                file_status, is_synced = result
                 self._accumulate_result(report, file_status, is_synced)
             pending_tasks.clear()
 

@@ -30,6 +30,7 @@ from onedrive_helper.config import (
 )
 
 log = setup_logging()
+TOKEN_REFRESH_BUFFER_SECONDS = 60
 
 
 class GraphRequestError(RuntimeError):
@@ -69,14 +70,16 @@ class GraphClient:  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def _refresh_deadline(expires_on: int) -> datetime:
+        """Refresh slightly before expiry while never scheduling in the past."""
         now = datetime.now(timezone.utc)
-        refresh_timestamp = expires_on - 60
+        refresh_timestamp = expires_on - TOKEN_REFRESH_BUFFER_SECONDS
         if refresh_timestamp <= int(now.timestamp()):
             return now
         return datetime.fromtimestamp(refresh_timestamp, tz=timezone.utc)
 
     @staticmethod
     def _encode_odata_search_term(value: str) -> str:
+        """Escape OData string literals before URL-encoding the search term."""
         return quote(value.replace("'", "''"), safe="")
 
     async def _auth_headers(self) -> dict[str, str]:
