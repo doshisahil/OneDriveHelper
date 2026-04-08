@@ -68,7 +68,7 @@ class AlbumCreatorService:
             json.dump(payload, file_handle, indent=2)
         os.replace(temp_path, path)
 
-    async def _add_items(  # pylint: disable=too-many-arguments,too-many-locals
+    async def _add_items(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
         self,
         album_id: str,
         item_ids: list[str],
