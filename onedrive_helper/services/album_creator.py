@@ -15,7 +15,7 @@ from onedrive_helper.config import BATCH_LIMIT
 from onedrive_helper.models import AlbumCreationResult
 
 
-@dataclass(slots=True)
+@dataclass
 class AlbumState:
     """Persisted resume metadata for album creation."""
 

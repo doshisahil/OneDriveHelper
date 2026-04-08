@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-@dataclass(slots=True)
+@dataclass
 class FileStatus:
     """Status for a single local file."""
 
@@ -20,7 +20,7 @@ class FileStatus:
     message: Optional[str] = None
 
 
-@dataclass(slots=True)
+@dataclass
 class DiskCleanupResult:
     """Result for the disk cleanup flow."""
 
@@ -34,7 +34,7 @@ class DiskCleanupResult:
     files: list[FileStatus] = field(default_factory=list)
 
 
-@dataclass(slots=True)
+@dataclass
 class AlbumCreationResult:
     """Result for the album creation flow."""
 
@@ -51,7 +51,7 @@ class AlbumCreationResult:
     state_path: Optional[str] = None
 
 
-@dataclass(slots=True)
+@dataclass
 class FolderUploadResult:
     """Result for a folder upload flow."""
 
@@ -65,7 +65,7 @@ class FolderUploadResult:
     files: list[FileStatus] = field(default_factory=list)
 
 
-@dataclass(slots=True)
+@dataclass
 class SyncScanReport:
     """Summary of a local folder scan versus OneDrive content."""
 
