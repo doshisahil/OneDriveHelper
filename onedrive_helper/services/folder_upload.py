@@ -18,6 +18,13 @@ class FolderUploadService:
     def __init__(self, graph_client) -> None:
         self._graph_client = graph_client
 
+    @staticmethod
+    def _join_remote_path(remote_folder_path: str, file_name: str) -> str:
+        normalized_parent = remote_folder_path.rstrip("/")
+        if not normalized_parent:
+            return f"/{file_name}"
+        return f"{normalized_parent}/{file_name}"
+
     async def _upload_single_file(
         self,
         local_file_path: Path,
@@ -33,7 +40,8 @@ class FolderUploadService:
                 return FileStatus(
                     name=local_file_path.name,
                     local_path=str(local_file_path),
-                    cloud_path=item.get("cloud_path") or f"{remote_folder_path}/{local_file_path.name}",
+                    cloud_path=item.get("cloud_path")
+                    or self._join_remote_path(remote_folder_path, local_file_path.name),
                     size=local_file_path.stat().st_size,
                     status=status,
                 )

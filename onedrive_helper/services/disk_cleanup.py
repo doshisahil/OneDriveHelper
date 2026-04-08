@@ -46,6 +46,7 @@ class DiskCleanupService:
                 continue
 
             result.scanned_files += 1
+            file_size = path.stat().st_size
             try:
                 matches = await self._graph_client.search_file(path.name, str(path))
             except (OSError, RuntimeError) as exc:
@@ -55,7 +56,7 @@ class DiskCleanupService:
                         name=path.name,
                         local_path=str(path),
                         status="error",
-                        size=path.stat().st_size,
+                        size=file_size,
                         message=str(exc),
                     )
                 )
@@ -72,7 +73,7 @@ class DiskCleanupService:
                         name=path.name,
                         local_path=str(path),
                         cloud_path=matches[0].get("cloud_path"),
-                        size=path.stat().st_size if path.exists() else 0,
+                        size=file_size,
                         status="deleted",
                     )
                 )
@@ -82,7 +83,7 @@ class DiskCleanupService:
                     FileStatus(
                         name=path.name,
                         local_path=str(path),
-                        size=path.stat().st_size,
+                        size=file_size,
                         status="skipped",
                     )
                 )

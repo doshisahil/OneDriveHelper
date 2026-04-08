@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
@@ -48,6 +49,8 @@ class GraphClient:  # pylint: disable=too-many-public-methods
     def __init__(self, credential: InteractiveBrowserCredential) -> None:
         self._credential = credential
         self._session: Optional[aiohttp.ClientSession] = None
+        self._token_headers: Optional[dict[str, str]] = None
+        self._token_expires_at: Optional[datetime] = None
 
     async def __aenter__(self) -> "GraphClient":
         connector = aiohttp.TCPConnector(limit=FOLDER_CONCURRENCY + 4)
@@ -58,12 +61,22 @@ class GraphClient:  # pylint: disable=too-many-public-methods
         if self._session is not None:
             await self._session.close()
 
-    def _auth_headers(self) -> dict[str, str]:
-        token = self._credential.get_token(*SCOPES)
-        return {
-            "Authorization": f"Bearer {token.token}",
-            "Accept": "application/json",
-        }
+    @staticmethod
+    def _token_is_valid(expires_at: Optional[datetime]) -> bool:
+        if expires_at is None:
+            return False
+        return expires_at > datetime.now(timezone.utc)
+
+    async def _auth_headers(self) -> dict[str, str]:
+        if self._token_headers is None or not self._token_is_valid(self._token_expires_at):
+            token = await asyncio.to_thread(self._credential.get_token, *SCOPES)
+            refresh_time = max(token.expires_on - 60, 0)
+            self._token_expires_at = datetime.fromtimestamp(refresh_time, tz=timezone.utc)
+            self._token_headers = {
+                "Authorization": f"Bearer {token.token}",
+                "Accept": "application/json",
+            }
+        return self._token_headers.copy()
 
     async def _request(
         self,
@@ -80,7 +93,7 @@ class GraphClient:  # pylint: disable=too-many-public-methods
         delay = 1
         request_headers = headers.copy() if headers else {}
         if auth:
-            request_headers.update(self._auth_headers())
+            request_headers.update(await self._auth_headers())
 
         for attempt in range(1, RETRY_MAX + 1):
             try:
@@ -240,7 +253,7 @@ class GraphClient:  # pylint: disable=too-many-public-methods
 
     async def search_file(self, file_name: str, file_path: str) -> list[dict[str, Any]]:
         """Search OneDrive by name and validate size and hash against a local file."""
-        encoded_name = quote(file_name, safe="")
+        encoded_name = quote(file_name.replace("'", "''"), safe="")
         query_url = (
             f"{GRAPH_BASE}/me/drive/root/search(q='{encoded_name}')"
             "?$select=id,name,size,file,parentReference,webUrl"
@@ -251,9 +264,8 @@ class GraphClient:  # pylint: disable=too-many-public-methods
             return []
 
         file_size = os.path.getsize(file_path)
-        local_sha256 = self.compute_hash(file_path, "sha256")
-        local_sha1 = self.compute_hash(file_path, "sha1")
         matches: list[dict[str, Any]] = []
+        hash_cache: dict[str, str] = {}
 
         for item in values:
             if item.get("size") != file_size:
@@ -263,14 +275,24 @@ class GraphClient:  # pylint: disable=too-many-public-methods
             api_sha256 = hashes.get("sha256Hash", "").lower()
             api_sha1 = hashes.get("sha1Hash", "").lower()
 
-            if api_sha256 and api_sha256 == local_sha256:
+            if api_sha256 and api_sha256 == await self._get_local_hash(file_path, "sha256", hash_cache):
                 item["cloud_path"] = self.format_item_path(item)
                 matches.append(item)
-            elif api_sha1 and api_sha1 == local_sha1:
+            elif api_sha1 and api_sha1 == await self._get_local_hash(file_path, "sha1", hash_cache):
                 item["cloud_path"] = self.format_item_path(item)
                 matches.append(item)
 
         return matches
+
+    async def _get_local_hash(
+        self,
+        file_path: str,
+        hash_type: str,
+        hash_cache: dict[str, str],
+    ) -> str:
+        if hash_type not in hash_cache:
+            hash_cache[hash_type] = await asyncio.to_thread(self.compute_hash, file_path, hash_type)
+        return hash_cache[hash_type]
 
     async def list_children(
         self,
@@ -352,7 +374,7 @@ class GraphClient:  # pylint: disable=too-many-public-methods
             current = await self.ensure_child_folder(current["id"], part)
         return current
 
-    async def enumerate_media(  # pylint: disable=too-many-locals
+    async def enumerate_media(
         self,
         folder_id: str,
         folder_path: str = "/",
@@ -360,24 +382,38 @@ class GraphClient:  # pylint: disable=too-many-public-methods
         semaphore: Optional[asyncio.Semaphore] = None,
     ) -> list[dict[str, Any]]:
         """Recursively enumerate media items beneath a OneDrive folder."""
-        current_counters = counters if counters is not None else {"folders": 0, "files": 0}
-        current_semaphore = semaphore or asyncio.Semaphore(FOLDER_CONCURRENCY)
-        current_counters["folders"] += 1
+        media_items, counts = await self._enumerate_media(
+            folder_id,
+            folder_path=folder_path,
+            semaphore=semaphore,
+        )
+        if counters is not None:
+            counters["folders"] = counters.get("folders", 0) + counts["folders"]
+            counters["files"] = counters.get("files", 0) + counts["files"]
+        return media_items
 
+    async def _enumerate_media(  # pylint: disable=too-many-locals
+        self,
+        folder_id: str,
+        *,
+        folder_path: str,
+        semaphore: Optional[asyncio.Semaphore] = None,
+    ) -> tuple[list[dict[str, Any]], dict[str, int]]:
+        current_semaphore = semaphore or asyncio.Semaphore(FOLDER_CONCURRENCY)
         async with current_semaphore:
             children = await self.list_children(folder_id)
 
         media_items: list[dict[str, Any]] = []
-        sub_tasks: list[asyncio.Future[Any]] = []
+        counts = {"folders": 1, "files": 0}
+        sub_tasks: list[asyncio.Task[tuple[list[dict[str, Any]], dict[str, int]]]] = []
         for item in children:
             if "folder" in item:
                 child_path = folder_path.rstrip("/") + "/" + item["name"]
                 sub_tasks.append(
-                    asyncio.ensure_future(
-                        self.enumerate_media(
+                    asyncio.create_task(
+                        self._enumerate_media(
                             item["id"],
-                            child_path,
-                            counters=current_counters,
+                            folder_path=child_path,
                             semaphore=current_semaphore,
                         )
                     )
@@ -391,14 +427,26 @@ class GraphClient:  # pylint: disable=too-many-public-methods
             if is_media or is_allowlisted:
                 item["cloud_path"] = self.format_item_path(item)
                 media_items.append(item)
-                current_counters["files"] += 1
+                counts["files"] += 1
 
-        if sub_tasks:
-            results = await asyncio.gather(*sub_tasks, return_exceptions=True)
-            for result in results:
-                if isinstance(result, list):
-                    media_items.extend(result)
-        return media_items
+        if not sub_tasks:
+            return media_items, counts
+
+        results = await asyncio.gather(*sub_tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, BaseException):
+                log.error(
+                    "Failed to enumerate media beneath '%s': %s",
+                    folder_path,
+                    result,
+                    exc_info=(type(result), result, result.__traceback__),
+                )
+                continue
+            child_items, child_counts = result
+            media_items.extend(child_items)
+            counts["folders"] += child_counts["folders"]
+            counts["files"] += child_counts["files"]
+        return media_items, counts
 
     async def browse_for_folder(self) -> Optional[dict[str, str]]:
         """Interactively browse the OneDrive folder tree and select a folder."""
