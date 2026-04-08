@@ -63,7 +63,7 @@ class GraphClient:  # pylint: disable=too-many-public-methods
             await self._session.close()
 
     @staticmethod
-    def _token_is_valid(expires_at: Optional[datetime]) -> bool:
+    def _token_is_fresh(expires_at: Optional[datetime]) -> bool:
         if expires_at is None:
             return False
         return expires_at > datetime.now(timezone.utc)
@@ -79,11 +79,11 @@ class GraphClient:  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def _encode_odata_search_term(value: str) -> str:
-        """Double OData single quotes before URL-encoding the search term."""
+        """Escape OData v4 string-literal quotes before URL-encoding the search term."""
         return quote(value.replace("'", "''"), safe="")
 
     async def _auth_headers(self) -> dict[str, str]:
-        if self._token_headers is None or not self._token_is_valid(self._token_expires_at):
+        if self._token_headers is None or not self._token_is_fresh(self._token_expires_at):
             token = await asyncio.to_thread(self._credential.get_token, *SCOPES)
             self._token_expires_at = self._refresh_deadline(token.expires_on)
             self._token_headers = {

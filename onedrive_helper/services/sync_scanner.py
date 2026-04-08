@@ -88,7 +88,7 @@ class SyncScannerService:
 
         report = SyncScanReport(local_path=str(local_root))
         semaphore = asyncio.Semaphore(FOLDER_CONCURRENCY)
-        pending_tasks: list[asyncio.Future[tuple[FileStatus, bool]]] = []
+        pending_tasks: list[asyncio.Task[tuple[FileStatus, bool]]] = []
 
         async def process_batch() -> None:
             results = await asyncio.gather(*pending_tasks, return_exceptions=True)
