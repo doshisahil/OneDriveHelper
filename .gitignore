@@ -164,3 +164,5 @@ cython_debug/
 pyvenv.cfg
 .idea/OneDriveHelper.iml
 share/
+.album_state_7365F1DC8C9A.json
+.graph_auth_record.json
