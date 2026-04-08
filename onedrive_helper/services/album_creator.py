@@ -1,7 +1,10 @@
 """Album creation service."""
 
+# pylint: disable=too-few-public-methods
+
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -37,7 +40,7 @@ class AlbumCreatorService:
         if not os.path.exists(path):
             return AlbumState(album_id=None, added_ids=set(), source_folder=None)
         with open(path, encoding="utf-8") as file_handle:
-            data = __import__("json").load(file_handle)
+            data = json.load(file_handle)
         source_folder = data.get("source_folder")
         if not isinstance(source_folder, dict):
             source_folder = None
@@ -62,10 +65,10 @@ class AlbumCreatorService:
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
         with open(temp_path, "w", encoding="utf-8") as file_handle:
-            __import__("json").dump(payload, file_handle, indent=2)
+            json.dump(payload, file_handle, indent=2)
         os.replace(temp_path, path)
 
-    async def _add_items(
+    async def _add_items(  # pylint: disable=too-many-arguments,too-many-locals
         self,
         album_id: str,
         item_ids: list[str],
@@ -110,7 +113,7 @@ class AlbumCreatorService:
             self._save_state(state_path, album_id, already_added, source_folder)
         return success_count, failure_count
 
-    async def run(
+    async def run(  # pylint: disable=too-many-arguments,too-many-locals
         self,
         source_folder: Optional[dict[str, str]] = None,
         *,

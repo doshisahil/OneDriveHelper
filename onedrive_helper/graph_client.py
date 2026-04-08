@@ -42,7 +42,7 @@ class GraphRequestError(RuntimeError):
         self.message = message
 
 
-class GraphClient:
+class GraphClient:  # pylint: disable=too-many-public-methods
     """Minimal async Microsoft Graph REST client."""
 
     def __init__(self, credential: InteractiveBrowserCredential) -> None:
@@ -352,7 +352,7 @@ class GraphClient:
             current = await self.ensure_child_folder(current["id"], part)
         return current
 
-    async def enumerate_media(
+    async def enumerate_media(  # pylint: disable=too-many-locals
         self,
         folder_id: str,
         folder_path: str = "/",

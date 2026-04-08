@@ -1,5 +1,7 @@
 """Folder upload service."""
 
+# pylint: disable=too-few-public-methods
+
 from __future__ import annotations
 
 import asyncio
@@ -44,7 +46,11 @@ class FolderUploadService:
                     message=str(exc),
                 )
 
-    async def run(self, local_folder_path: str, remote_onedrive_path: str) -> FolderUploadResult:
+    async def run(  # pylint: disable=too-many-locals
+        self,
+        local_folder_path: str,
+        remote_onedrive_path: str,
+    ) -> FolderUploadResult:
         """Upload a local folder tree to a OneDrive location."""
         local_root = Path(local_folder_path).expanduser().resolve()
         if not local_root.exists() or not local_root.is_dir():

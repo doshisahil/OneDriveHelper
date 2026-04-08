@@ -37,13 +37,12 @@ AUTH_RECORD_FILE = ".graph_auth_record.json"
 TOKEN_CACHE_NAME = "onedrive_helper"
 DEFAULT_LOG_FILE = "onedrive_helper.log"
 
-_LOGGING_CONFIGURED = False
+_LOGGING_STATE = {"configured": False}
 
 
 def setup_logging(log_file: str = DEFAULT_LOG_FILE) -> logging.Logger:
     """Configure root logging once and return the package logger."""
-    global _LOGGING_CONFIGURED
-    if _LOGGING_CONFIGURED:
+    if _LOGGING_STATE["configured"]:
         return logging.getLogger("onedrive_helper")
 
     logging.basicConfig(
@@ -55,5 +54,5 @@ def setup_logging(log_file: str = DEFAULT_LOG_FILE) -> logging.Logger:
             logging.StreamHandler(sys.stdout),
         ],
     )
-    _LOGGING_CONFIGURED = True
+    _LOGGING_STATE["configured"] = True
     return logging.getLogger("onedrive_helper")
