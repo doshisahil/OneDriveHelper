@@ -70,11 +70,10 @@ class GraphClient:  # pylint: disable=too-many-public-methods
     @staticmethod
     def _refresh_deadline(expires_on: int) -> datetime:
         now = datetime.now(timezone.utc)
-        refresh_at = datetime.fromtimestamp(
-            max(expires_on - 60, int(now.timestamp())),
-            tz=timezone.utc,
-        )
-        return max(refresh_at, now)
+        refresh_timestamp = expires_on - 60
+        if refresh_timestamp <= int(now.timestamp()):
+            return now
+        return datetime.fromtimestamp(refresh_timestamp, tz=timezone.utc)
 
     @staticmethod
     def _encode_odata_search_term(value: str) -> str:
