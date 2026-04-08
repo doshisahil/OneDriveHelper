@@ -52,6 +52,7 @@ class GraphClient:  # pylint: disable=too-many-public-methods
         self._session: Optional[aiohttp.ClientSession] = None
         self._token_headers: Optional[dict[str, str]] = None
         self._token_expires_at: Optional[datetime] = None
+        self._token_lock = asyncio.Lock()
 
     async def __aenter__(self) -> "GraphClient":
         connector = aiohttp.TCPConnector(limit=FOLDER_CONCURRENCY + 4)
@@ -73,7 +74,7 @@ class GraphClient:  # pylint: disable=too-many-public-methods
         """Refresh slightly before expiry, or immediately if that buffer has passed."""
         now = datetime.now(timezone.utc)
         refresh_timestamp = expires_on - TOKEN_REFRESH_BUFFER_SECONDS
-        if refresh_timestamp <= int(now.timestamp()):
+        if refresh_timestamp <= now.timestamp():
             return now
         return datetime.fromtimestamp(refresh_timestamp, tz=timezone.utc)
 
@@ -84,12 +85,14 @@ class GraphClient:  # pylint: disable=too-many-public-methods
 
     async def _auth_headers(self) -> dict[str, str]:
         if self._token_headers is None or not self._token_is_fresh(self._token_expires_at):
-            token = await asyncio.to_thread(self._credential.get_token, *SCOPES)
-            self._token_expires_at = self._refresh_deadline(token.expires_on)
-            self._token_headers = {
-                "Authorization": f"Bearer {token.token}",
-                "Accept": "application/json",
-            }
+            async with self._token_lock:
+                if self._token_headers is None or not self._token_is_fresh(self._token_expires_at):
+                    token = await asyncio.to_thread(self._credential.get_token, *SCOPES)
+                    self._token_expires_at = self._refresh_deadline(token.expires_on)
+                    self._token_headers = {
+                        "Authorization": f"Bearer {token.token}",
+                        "Accept": "application/json",
+                    }
         return self._token_headers
 
     async def _request(
