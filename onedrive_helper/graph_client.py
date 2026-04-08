@@ -67,16 +67,28 @@ class GraphClient:  # pylint: disable=too-many-public-methods
             return False
         return expires_at > datetime.now(timezone.utc)
 
+    @staticmethod
+    def _refresh_deadline(expires_on: int) -> datetime:
+        now = datetime.now(timezone.utc)
+        refresh_at = datetime.fromtimestamp(
+            max(expires_on - 60, int(now.timestamp())),
+            tz=timezone.utc,
+        )
+        return max(refresh_at, now)
+
+    @staticmethod
+    def _encode_odata_search_term(value: str) -> str:
+        return quote(value.replace("'", "''"), safe="")
+
     async def _auth_headers(self) -> dict[str, str]:
         if self._token_headers is None or not self._token_is_valid(self._token_expires_at):
             token = await asyncio.to_thread(self._credential.get_token, *SCOPES)
-            refresh_time = max(token.expires_on - 60, 0)
-            self._token_expires_at = datetime.fromtimestamp(refresh_time, tz=timezone.utc)
+            self._token_expires_at = self._refresh_deadline(token.expires_on)
             self._token_headers = {
                 "Authorization": f"Bearer {token.token}",
                 "Accept": "application/json",
             }
-        return self._token_headers.copy()
+        return self._token_headers
 
     async def _request(
         self,
@@ -253,7 +265,7 @@ class GraphClient:  # pylint: disable=too-many-public-methods
 
     async def search_file(self, file_name: str, file_path: str) -> list[dict[str, Any]]:
         """Search OneDrive by name and validate size and hash against a local file."""
-        encoded_name = quote(file_name.replace("'", "''"), safe="")
+        encoded_name = self._encode_odata_search_term(file_name)
         query_url = (
             f"{GRAPH_BASE}/me/drive/root/search(q='{encoded_name}')"
             "?$select=id,name,size,file,parentReference,webUrl"
