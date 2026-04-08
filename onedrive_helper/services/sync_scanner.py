@@ -88,13 +88,16 @@ class SyncScannerService:
 
         report = SyncScanReport(local_path=str(local_root))
         semaphore = asyncio.Semaphore(FOLDER_CONCURRENCY)
-        pending_tasks: list[asyncio.Task[tuple[FileStatus, bool]]] = []
+        pending_tasks: list[tuple[Path, asyncio.Task[tuple[FileStatus, bool]]]] = []
 
         async def process_batch() -> None:
-            results = await asyncio.gather(*pending_tasks, return_exceptions=True)
-            for result in results:
+            results = await asyncio.gather(
+                *(task for _, task in pending_tasks),
+                return_exceptions=True,
+            )
+            for (path, _), result in zip(pending_tasks, results):
                 if isinstance(result, BaseException):
-                    report.errors.append(f"Unexpected scan failure: {result}")
+                    report.errors.append(f"Unexpected scan failure for {path}: {result}")
                     continue
                 file_status, is_synced = result
                 self._accumulate_result(report, file_status, is_synced)
@@ -103,7 +106,7 @@ class SyncScannerService:
         for path in local_root.rglob("*"):
             if not path.is_file() or not self._should_include(path, include_all):
                 continue
-            pending_tasks.append(asyncio.create_task(self._scan_single_file(path, semaphore)))
+            pending_tasks.append((path, asyncio.create_task(self._scan_single_file(path, semaphore))))
             if len(pending_tasks) >= FOLDER_CONCURRENCY:
                 await process_batch()
 

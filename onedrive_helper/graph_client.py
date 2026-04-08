@@ -64,13 +64,13 @@ class GraphClient:  # pylint: disable=too-many-public-methods
             await self._session.close()
 
     @staticmethod
-    def _token_is_fresh(expires_at: Optional[datetime]) -> bool:
+    def _token_is_valid(expires_at: Optional[datetime]) -> bool:
         if expires_at is None:
             return False
         return expires_at > datetime.now(timezone.utc)
 
     @staticmethod
-    def _refresh_deadline(expires_on: int) -> datetime:
+    def _calculate_refresh_time(expires_on: int) -> datetime:
         """Refresh slightly before expiry, or immediately if that buffer has passed."""
         now = datetime.now(timezone.utc)
         refresh_timestamp = expires_on - TOKEN_REFRESH_BUFFER_SECONDS
@@ -84,11 +84,11 @@ class GraphClient:  # pylint: disable=too-many-public-methods
         return quote(value.replace("'", "''"), safe="")
 
     async def _auth_headers(self) -> dict[str, str]:
-        if self._token_headers is None or not self._token_is_fresh(self._token_expires_at):
+        if self._token_headers is None or not self._token_is_valid(self._token_expires_at):
             async with self._token_lock:
-                if self._token_headers is None or not self._token_is_fresh(self._token_expires_at):
+                if self._token_headers is None or not self._token_is_valid(self._token_expires_at):
                     token = await asyncio.to_thread(self._credential.get_token, *SCOPES)
-                    self._token_expires_at = self._refresh_deadline(token.expires_on)
+                    self._token_expires_at = self._calculate_refresh_time(token.expires_on)
                     self._token_headers = {
                         "Authorization": f"Bearer {token.token}",
                         "Accept": "application/json",
