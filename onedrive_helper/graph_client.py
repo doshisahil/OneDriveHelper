@@ -70,7 +70,7 @@ class GraphClient:  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def _refresh_deadline(expires_on: int) -> datetime:
-        """Refresh slightly before expiry while never scheduling in the past."""
+        """Refresh slightly before expiry, or immediately if that buffer has passed."""
         now = datetime.now(timezone.utc)
         refresh_timestamp = expires_on - TOKEN_REFRESH_BUFFER_SECONDS
         if refresh_timestamp <= int(now.timestamp()):
@@ -79,7 +79,7 @@ class GraphClient:  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def _encode_odata_search_term(value: str) -> str:
-        """Escape OData string literals before URL-encoding the search term."""
+        """Double OData single quotes before URL-encoding the search term."""
         return quote(value.replace("'", "''"), safe="")
 
     async def _auth_headers(self) -> dict[str, str]:
